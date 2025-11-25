@@ -29,17 +29,21 @@ console.log(
   `🚀 Starting server in ${process.env.NODE_ENV || "development"} mode`
 );
 
-// Enable CORS for development
-const allowedOrigins = ["http://localhost:5173"];
-
-// CORS configuration
+// CORS configuration - allowing all origins for now
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all origins for now
+    return callback(null, true);
+    
+    // For production, you can uncomment and modify this:
+    // const allowedOrigins = ["http://localhost:5173", "https://your-frontend-domain.com"];
+    // if (allowedOrigins.indexOf(origin) === -1) {
+    //   return callback(new Error('Not allowed by CORS'));
+    // }
+    // callback(null, true);
   },
   credentials: true,
   allowedHeaders: [
