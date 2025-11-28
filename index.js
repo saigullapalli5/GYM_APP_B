@@ -30,58 +30,33 @@ console.log(
 );
 
 // CORS configuration
-const defaultOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://gym-app-b.onrender.com",
-  "https://gym-app-b.onrender.com/",
-  "https://gym-app-f.vercel.app",
-  "https://gym-app-f.vercel.app/",
-];
-
-const extraOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter((origin) => origin.length > 0);
-
-const allowedOrigins = [...new Set([...defaultOrigins, ...extraOrigins])];
-
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like same-origin requests, mobile apps or curl)
-    if (!origin) {
-      return callback(null, true);
+    const allowedOrigins = [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://gym-app-b.onrender.com",
+      "https://gym-app-f.vercel.app",
+    ];
+
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg =
+        "The CORS policy for this site does not allow access from the specified Origin.";
+      return callback(new Error(msg), false);
     }
 
-    // Check if the origin is in the allowed list
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // For development, allow all origins but log a warning
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(`Allowing non-whitelisted origin in development: ${origin}`);
-      return callback(null, true);
-    }
-
-    console.error(`CORS blocked: ${origin} not in allowed origins`);
-    return callback(new Error("Not allowed by CORS"));
+    return callback(null, true);
   },
-  credentials: true, // Important for cookies, authorization headers with HTTPS
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Content-Length",
-    "Accept",
-    "Origin",
-    "X-Auth-Token",
-  ],
-  methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
-  optionsSuccessStatus: 200,
-  exposedHeaders: ["Content-Length", "X-Foo", "X-Bar"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["Content-Range", "X-Content-Range"],
+  maxAge: 600, // 10 minutes
   preflightContinue: false,
-  maxAge: 86400, // 24 hours
+  optionsSuccessStatus: 204,
 };
 
 // Apply CORS to all routes
