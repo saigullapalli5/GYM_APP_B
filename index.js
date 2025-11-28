@@ -29,58 +29,64 @@ console.log(
   `🚀 Starting server in ${process.env.NODE_ENV || "development"} mode`
 );
 
-// CORS configuration - allowing all origins for now
+// CORS configuration
+const defaultOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://gym-app-b.onrender.com",
+  "https://gym-app-b.onrender.com/", // Some browsers add trailing slash
+];
+
+const extraOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+const allowedOrigins = [...new Set([...defaultOrigins, ...extraOrigins])];
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Allow all origins for now
-    return callback(null, true);
-    
-    // For production, you can uncomment and modify this:
-    // const allowedOrigins = ["http://localhost:5173", "https://your-frontend-domain.com"];
-    // if (allowedOrigins.indexOf(origin) === -1) {
-    //   return callback(new Error('Not allowed by CORS'));
-    // }
-    // callback(null, true);
+    // Allow requests with no origin (like same-origin requests, mobile apps or curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // For development, allow all origins but log a warning
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`Allowing non-whitelisted origin in development: ${origin}`);
+      return callback(null, true);
+    }
+
+    console.error(`CORS blocked: ${origin} not in allowed origins`);
+    return callback(new Error("Not allowed by CORS"));
   },
-  credentials: true,
+  credentials: true, // Important for cookies, authorization headers with HTTPS
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Requested-With',
-    'Content-Length',
-    'Accept',
-    'Origin',
-    'X-Auth-Token'
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Content-Length",
+    "Accept",
+    "Origin",
+    "X-Auth-Token",
   ],
-  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
-  optionsSuccessStatus: 200
+  methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+  optionsSuccessStatus: 200,
+  exposedHeaders: ["Content-Length", "X-Foo", "X-Bar"],
+  preflightContinue: false,
+  maxAge: 86400, // 24 hours
 };
 
 // Apply CORS to all routes
 app.use(cors(corsOptions));
 
 // Handle preflight requests
-app.options('*', cors(corsOptions));
-
-// Add CORS headers to all responses
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods",
-      "GET, POST, PUT, DELETE, OPTIONS"
-    );
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With"
-    );
-  }
-  next();
-});
+app.options("*", cors(corsOptions));
 
 // Initialize middleware
 app.use(express.json());
@@ -97,6 +103,14 @@ app.use((req, res, next) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  if (err?.message === "Not allowed by CORS") {
+    console.error(`❌ CORS rejection for origin: ${req.headers.origin || "unknown"}`);
+    return res.status(403).json({
+      success: false,
+      message: "CORS policy does not allow access from this origin",
+    });
+  }
+
   console.error("❌ Error:", err.stack);
   res.status(500).json({
     success: false,
@@ -195,7 +209,7 @@ const startServer = async () => {
 
     // Start the server
     const server = app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ Server is running on http://localhost:${PORT}`);
+      console.log(`✅ Server is running on ${PORT}`);
       console.log("📡 Available routes:");
       console.log(`   - GET  /health`);
       console.log(`   - GET  /api/v1/auth/...`);
