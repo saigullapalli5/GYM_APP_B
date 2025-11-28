@@ -34,7 +34,9 @@ const defaultOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://gym-app-b.onrender.com",
-  "https://gym-app-b.onrender.com/", // Some browsers add trailing slash
+  "https://gym-app-b.onrender.com/",
+  "https://gym-app-f.vercel.app",
+  "https://gym-app-f.vercel.app/",
 ];
 
 const extraOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
@@ -104,7 +106,9 @@ app.use((req, res, next) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   if (err?.message === "Not allowed by CORS") {
-    console.error(`❌ CORS rejection for origin: ${req.headers.origin || "unknown"}`);
+    console.error(
+      `❌ CORS rejection for origin: ${req.headers.origin || "unknown"}`
+    );
     return res.status(403).json({
       success: false,
       message: "CORS policy does not allow access from this origin",
